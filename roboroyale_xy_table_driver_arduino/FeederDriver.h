@@ -1,3 +1,14 @@
+/*
+ * FeederDriver.cpp
+ *
+ *  Created on: May 21, 2026
+ *      Author: Mohsen Zahmatkesh (mohsenzahmatkesh1992@gmail.com)
+ * Github: https://github.com/mohsenzahmatkesh/RR_xy_table_feeder_firmware
+ * This file provide as is with no guarantee of any sort.
+ * Any modification and redistribution of this file is allowed as long as this description is kept at the top of the file.
+ */
+
+
 #ifndef __FEEDER_DRIVER_H__
 #define __FEEDER_DRIVER_H__
 
@@ -33,7 +44,7 @@ private:
 
 public:
     void begin();
-    void update(); // Replaces the old loop()
+    void update(); 
     void homing();
     void stopmotor();
     

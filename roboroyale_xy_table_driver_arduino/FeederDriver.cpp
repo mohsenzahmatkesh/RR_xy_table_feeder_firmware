@@ -3,7 +3,7 @@
  *
  *  Created on: May 21, 2026
  *      Author: Mohsen Zahmatkesh (mohsenzahmatkesh1992@gmail.com)
- * Github: https://github.com/mahmood-saadat/ESP32-Templates/tree/master/Task%20Templates
+ * Github: https://github.com/mohsenzahmatkesh/RR_xy_table_feeder_firmware
  * This file provide as is with no guarantee of any sort.
  * Any modification and redistribution of this file is allowed as long as this description is kept at the top of the file.
  */
@@ -13,7 +13,6 @@
 
 FeederDriver feederDriver;
 
-// ISR must be outside the class
 void IRAM_ATTR onZEncoder() {
     feederDriver.HandleEncoder();
 }
@@ -51,7 +50,7 @@ void FeederDriver::stopmotor() {
 void FeederDriver::homing() {
     if (homing_complete) return;
     
-    // Note: Replaced delay(1) with vTaskDelay to prevent Watchdog Timer crashes
+    
     while (digitalRead(sw_z_bot) != 0) {
         analogWrite(mot_z_a1, 200);   
         analogWrite(mot_z_a2, 0);
