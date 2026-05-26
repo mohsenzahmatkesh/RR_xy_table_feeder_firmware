@@ -15,7 +15,7 @@
 #include <Arduino.h>
 
 //feeder
-#define mot_z_a1   25 
+#define mot_z_a1   25
 #define mot_z_a2   26
 #define enc_mot_z_a1 22
 #define enc_mot_z_a2 23

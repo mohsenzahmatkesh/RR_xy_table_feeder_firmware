@@ -7,21 +7,23 @@
 #include "MotorDriver.h"
 #include "FeederDriver.h"
 
-
 //The setup function is called once at startup of the sketch
 void setup()
 {
 	Serial.begin(115200);
-	//Serial.printf("Started!\r\n");
 	WifiManager::WiFiOn();
 	WifiManager::WiFiOff();
+	
+	// 1. Initialize and Home the Z-Feeder FIRST
+	feederDriver.begin();
+	feederDriver.homing();
+	
+	// 2. Start the background RTOS Tasks for X/Y and Comms
 	commands.begin();
 	motorDriver.begin();
-	feederDriver.begin();
-  feederDriver.homing();
 }
 
-// The loop function is called in an endless loop
+
 void loop()
 {
 	feederDriver.update();

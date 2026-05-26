@@ -13,11 +13,13 @@
 
 FeederDriver feederDriver;
 
+// ISR must be outside the class
 void IRAM_ATTR onZEncoder() {
     feederDriver.HandleEncoder();
 }
 
-void FeederDriver::HandleEncoder() {
+// Added IRAM_ATTR to prevent memory crashes during interrupts
+void IRAM_ATTR FeederDriver::HandleEncoder() {
     if (feed_z_moving > 0){
          feed_z_current_position++;
     } else if (feed_z_moving < 0){
@@ -50,26 +52,34 @@ void FeederDriver::stopmotor() {
 void FeederDriver::homing() {
     if (homing_complete) return;
     
+    // 1. Start moving towards the bottom switch (Called ONCE)
+    analogWrite(mot_z_a1, 200);   
+    analogWrite(mot_z_a2, 0);
     
+    // Wait until the switch is triggered
     while (digitalRead(sw_z_bot) != 0) {
-        analogWrite(mot_z_a1, 200);   
-        analogWrite(mot_z_a2, 0);
         esp_task_wdt_reset();
-        vTaskDelay(1 / portTICK_PERIOD_MS); 
+        vTaskDelay(10 / portTICK_PERIOD_MS); 
     }
+    
+    // Stop and reset position
     feed_z_current_position = 0;  
     stopmotor();
     vTaskDelay(200 / portTICK_PERIOD_MS);
     
+    // 2. Start moving away from the switch (Called ONCE)
     int32_t target = 1000;
     feed_z_moving = 1;
     
+    analogWrite(mot_z_a1, 0);  
+    analogWrite(mot_z_a2, 200);
+    
+    // Wait until we reach the target
     while (feed_z_current_position < target) {
-        analogWrite(mot_z_a1, 0);  
-        analogWrite(mot_z_a2, 200);
         esp_task_wdt_reset();
-        vTaskDelay(1 / portTICK_PERIOD_MS);
+        vTaskDelay(10 / portTICK_PERIOD_MS);
     }
+    
     stopmotor();
     feed_z_moving = 0;
     homing_complete = true;   
@@ -90,25 +100,34 @@ void FeederDriver::update() {
     bool feed_z_move = (abs(feed_z_error) > pos_tolerance_big  && feed_z_moving == 0) ||
                        (abs(feed_z_error) > pos_tolerance_small && feed_z_moving != 0);
   
+    int8_t desired_moving = 0;
     if (feed_z_move) {
-        if (feed_z_error > 0 ) feed_z_moving = 1;     
-        else if (feed_z_error < 0 && sw_z_bot_status == 0) feed_z_moving = -1;    
-        else feed_z_moving = 0;
-    } else {
-        feed_z_moving = 0;
+        if (feed_z_error > 0 ) desired_moving = 1;     
+        else if (feed_z_error < 0 && sw_z_bot_status == 0) desired_moving = -1;    
     }
     
     int speed_z = abs(feed_z_error);
     if (speed_z > 255) speed_z = 255;
     if (speed_z > max_velocity) speed_z = max_velocity;
 
-    if (feed_z_moving == 1) {
-        analogWrite(mot_z_a1, 0);
-        analogWrite(mot_z_a2, speed_z);
-    } else if (feed_z_moving == -1) {
-        analogWrite(mot_z_a1, speed_z);
-        analogWrite(mot_z_a2, 0);
-    } else {
-        stopmotor();
+    // Only update the PWM signals if the speed or direction actually changed
+    // This prevents the ESP32 timer from glitching out
+    static int8_t last_moving = -99;
+    static int last_speed = -1;
+
+    if (desired_moving != last_moving || speed_z != last_speed) {
+        if (desired_moving == 1) {
+            analogWrite(mot_z_a1, 0);
+            analogWrite(mot_z_a2, speed_z);
+        } else if (desired_moving == -1) {
+            analogWrite(mot_z_a1, speed_z);
+            analogWrite(mot_z_a2, 0);
+        } else {
+            stopmotor();
+        }
+        last_moving = desired_moving;
+        last_speed = speed_z;
     }
+    
+    feed_z_moving = desired_moving;
 }
